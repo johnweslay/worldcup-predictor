@@ -14,35 +14,45 @@ export const authOptions: AuthOptions = {
   callbacks: {
     async signIn({ user, profile }) {
       if (!user?.id) return false
-      const twitterId     = user.id
-      const twitterHandle = (profile as any)?.data?.username ?? user.name ?? ''
-      const twitterName   = user.name ?? ''
-      const twitterImage  = user.image ?? ''
+      try {
+        const twitterId     = user.id
+        const twitterHandle = (profile as any)?.data?.username ?? user.name ?? ''
+        const twitterName   = user.name ?? ''
+        const twitterImage  = user.image ?? ''
 
-      const { error } = await supabaseAdmin
-        .from('users')
-        .upsert(
-          { twitter_id: twitterId, twitter_handle: twitterHandle,
-            twitter_name: twitterName, twitter_image: twitterImage },
-          { onConflict: 'twitter_id', ignoreDuplicates: false }
-        )
-      if (error) { console.error('signIn upsert error', error); return false }
-      return true
+        const { error } = await supabaseAdmin
+          .from('users')
+          .upsert(
+            { twitter_id: twitterId, twitter_handle: twitterHandle,
+              twitter_name: twitterName, twitter_image: twitterImage },
+            { onConflict: 'twitter_id', ignoreDuplicates: false }
+          )
+        if (error) console.error('signIn upsert error', error)
+        // Always allow sign in even if DB write fails
+        return true
+      } catch (err) {
+        console.error('signIn error', err)
+        return true
+      }
     },
 
     async session({ session, token }) {
       if (session.user && token.sub) {
         ;(session.user as any).twitterId = token.sub
-        const { data: dbUser } = await supabaseAdmin
-          .from('users')
-          .select('id, twitter_handle, points, wl_claimed')
-          .eq('twitter_id', token.sub)
-          .single()
-        if (dbUser) {
-          ;(session.user as any).dbId      = dbUser.id
-          ;(session.user as any).handle    = dbUser.twitter_handle
-          ;(session.user as any).points    = dbUser.points
-          ;(session.user as any).wlClaimed = dbUser.wl_claimed
+        try {
+          const { data: dbUser } = await supabaseAdmin
+            .from('users')
+            .select('id, twitter_handle, points, wl_claimed')
+            .eq('twitter_id', token.sub)
+            .single()
+          if (dbUser) {
+            ;(session.user as any).dbId      = dbUser.id
+            ;(session.user as any).handle    = dbUser.twitter_handle
+            ;(session.user as any).points    = dbUser.points
+            ;(session.user as any).wlClaimed = dbUser.wl_claimed
+          }
+        } catch (err) {
+          console.error('session error', err)
         }
       }
       return session
