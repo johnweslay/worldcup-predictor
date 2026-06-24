@@ -8,32 +8,38 @@ export const authOptions: AuthOptions = {
       clientId:     process.env.TWITTER_CLIENT_ID!,
       clientSecret: process.env.TWITTER_CLIENT_SECRET!,
       version: '2.0',
+      authorization: {
+        params: {
+          scope: 'users.read tweet.read offline.access',
+        },
+      },
     }),
   ],
 
+  session: {
+    strategy: 'jwt',
+  },
+
   callbacks: {
     async signIn({ user, profile }) {
-      if (!user?.id) return false
+      if (!user?.id) return true
       try {
         const twitterId     = user.id
         const twitterHandle = (profile as any)?.data?.username ?? user.name ?? ''
         const twitterName   = user.name ?? ''
         const twitterImage  = user.image ?? ''
 
-        const { error } = await supabaseAdmin
+        await supabaseAdmin
           .from('users')
           .upsert(
             { twitter_id: twitterId, twitter_handle: twitterHandle,
               twitter_name: twitterName, twitter_image: twitterImage },
             { onConflict: 'twitter_id', ignoreDuplicates: false }
           )
-        if (error) console.error('signIn upsert error', error)
-        // Always allow sign in even if DB write fails
-        return true
       } catch (err) {
         console.error('signIn error', err)
-        return true
       }
+      return true
     },
 
     async session({ session, token }) {
