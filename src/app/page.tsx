@@ -16,9 +16,9 @@ export default function Home() {
 
       {/* NAV */}
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ fontWeight: '700', fontSize: '18px', color: '#F5F2EC', letterSpacing: '-0.03em' }}>
-          DUDE,<br />
-          <span style={{ color: '#D8FF1A' }}>TRUST ME ×</span>
+        <div style={{ fontWeight: '700', fontSize: '18px', color: '#F5F2EC', letterSpacing: '-0.03em', lineHeight: '1.2' }}>
+          DUDE TRUST ME<br />
+          <span style={{ color: '#D8FF1A', fontSize: '11px', fontWeight: '500', letterSpacing: '0.08em' }}>BY @STUPIDITY</span>
         </div>
         <div style={{ display: 'none', gap: '32px' }} className="nav-links">
           {['ABOUT', 'LEADERBOARD', 'REWARDS', 'FAQ'].map(l => (
@@ -42,7 +42,7 @@ export default function Home() {
 
           {/* Tagline */}
           <p style={{ color: '#666666', fontSize: '13px', fontWeight: '500', letterSpacing: '0.08em', marginBottom: '16px' }}>
-            NO TOKENS. NO FEES. JUST <span style={{ color: '#D8FF1A', fontStyle: 'italic' }}>DUMB LUCK.</span>
+            NO TOKENS. NO FEES. BY <span style={{ color: '#D8FF1A', fontStyle: 'italic' }}>@STUPIDITY</span>
           </p>
 
           {/* Hero headline */}
