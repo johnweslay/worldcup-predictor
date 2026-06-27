@@ -51,7 +51,7 @@ export default function WhitelistPage() {
       setVerifyingFollow(false)
       setTaskFollow(true)
       saveTask('follow', true)
-    }, 5000)
+    }, 7000)
   }
 
   function handleLike() {
@@ -62,7 +62,7 @@ export default function WhitelistPage() {
       setVerifyingLike(false)
       setTaskLike(true)
       saveTask('like', true)
-    }, 5000)
+    }, 7000)
   }
 
   const user      = session?.user as any
