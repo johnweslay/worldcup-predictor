@@ -63,7 +63,7 @@ export default function MatchCard({ match, userPoints, usedStupidPickToday, onPr
       return `${base} bg-transparent border-[#EAE7E1] text-[#666666]`
     }
     if (confirmed && key === confirmedPick)
-      return `${base} ${isStupidPick || isStupidUsed ? 'bg-red-500 border-red-500 text-white' : 'bg-[#111111] border-[#111111] text-white'}`
+      return `${base} ${stupidPick || isStupidUsed ? 'bg-red-500 border-red-500 text-white' : 'bg-[#111111] border-[#111111] text-white'}`
     if (!confirmed && key === active)
       return `${base} bg-[#111111] border-[#111111] text-[#D8FF1A]`
     return `${base} bg-transparent border-[#EAE7E1] text-[#666666] hover:border-[#111111] hover:text-[#111111]`
