@@ -4,13 +4,17 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import NavBar from '@/components/NavBar'
 
+const TWEET_URL = 'PLACEHOLDER' // Replace with actual tweet URL later
+
 export default function WhitelistPage() {
   const { data: session, status, update } = useSession()
   const router = useRouter()
-  const [wallet, setWallet]   = useState('')
-  const [entry, setEntry]     = useState<any>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState<string | null>(null)
+  const [wallet, setWallet]         = useState('')
+  const [entry, setEntry]           = useState<any>(null)
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+  const [taskFollow, setTaskFollow] = useState(false)
+  const [taskLike, setTaskLike]     = useState(false)
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/')
@@ -21,11 +25,45 @@ export default function WhitelistPage() {
     fetch('/api/whitelist')
       .then(r => r.json())
       .then(d => setEntry(d.entry))
+
+    // Load task state from localStorage
+    const saved = localStorage.getItem('wl_tasks')
+    if (saved) {
+      const { follow, like } = JSON.parse(saved)
+      setTaskFollow(follow ?? false)
+      setTaskLike(like ?? false)
+    }
   }, [status])
 
-  const user = session?.user as any
-  const pts  = user?.points ?? 0
-  const canClaim = pts >= 3 && !user?.wlClaimed
+  function saveTask(key: string, val: boolean) {
+    const saved = localStorage.getItem('wl_tasks')
+    const tasks = saved ? JSON.parse(saved) : {}
+    tasks[key] = val
+    localStorage.setItem('wl_tasks', JSON.stringify(tasks))
+  }
+
+  function handleFollow() {
+    window.open('https://x.com/STU_pidityy', '_blank')
+    setTimeout(() => {
+      setTaskFollow(true)
+      saveTask('follow', true)
+    }, 1500)
+  }
+
+  function handleLike() {
+    if (TWEET_URL === 'PLACEHOLDER') return
+    window.open(TWEET_URL, '_blank')
+    setTimeout(() => {
+      setTaskLike(true)
+      saveTask('like', true)
+    }, 1500)
+  }
+
+  const user      = session?.user as any
+  const pts       = user?.points ?? 0
+  const hasPoints = pts >= 3
+  const allTasks  = taskFollow && taskLike && hasPoints
+  const canClaim  = allTasks && !user?.wlClaimed
 
   async function claim() {
     if (!canClaim) return
@@ -44,110 +82,133 @@ export default function WhitelistPage() {
     setLoading(false)
     if (!res.ok) { setError(data.error); return }
     setEntry(data)
-    await update()   // refresh session to reflect wl_claimed
+    await update()
   }
 
   if (status === 'loading') return null
 
+  const tasks = [
+    {
+      id:       'points',
+      icon:     '⚽',
+      label:    'Earn 3 points',
+      sub:      `${Math.min(pts, 3)} / 3 points earned`,
+      done:     hasPoints,
+      action:   null,
+      btnLabel: null,
+    },
+    {
+      id:       'follow',
+      icon:     '𝕏',
+      label:    'Follow @STU_pidityy',
+      sub:      'Follow us on X to stay updated',
+      done:     taskFollow,
+      action:   handleFollow,
+      btnLabel: 'Follow',
+    },
+    {
+      id:       'like',
+      icon:     '🔁',
+      label:    'Like & Repost announcement',
+      sub:      TWEET_URL === 'PLACEHOLDER' ? 'Coming soon — tweet not posted yet' : 'Like and repost our announcement tweet',
+      done:     taskLike,
+      action:   TWEET_URL === 'PLACEHOLDER' ? null : handleLike,
+      btnLabel: 'Like & Repost',
+    },
+  ]
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F5F2EC]">
       <NavBar session={session} />
       <main className="max-w-xl mx-auto px-4 py-6">
-        <h1 className="text-xl font-semibold text-gray-900 mb-1">Whitelist exchange</h1>
-        <p className="text-sm text-gray-500 mb-5">
-          Redeem 3 points for a guaranteed mint allocation.
-        </p>
+
+        <h1 className="text-xl font-bold text-[#111111] mb-1">Claim Whitelist</h1>
+        <p className="text-xs text-[#666666] mb-6">Complete all tasks to unlock your whitelist spot.</p>
 
         {/* Already claimed */}
-        {(user?.wlClaimed || entry) && (
-          <div className="bg-green-50 border border-green-300 rounded-2xl p-5 mb-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-xl">✅</div>
-              <div>
-                <div className="font-medium text-green-900">Whitelist claimed!</div>
-                <div className="text-sm text-green-700">You're in — see you at mint day.</div>
-              </div>
-            </div>
-            <div className="text-xs text-green-700 space-y-1">
-              <div>Wallet: <code className="font-mono">{entry?.walletAddress ?? user?.wallet_address}</code></div>
-              {entry?.txHash && (
-                <div>Tx: <a href={`https://etherscan.io/tx/${entry.txHash}`} target="_blank" rel="noreferrer"
-                  className="underline font-mono">{entry.txHash.slice(0,18)}…</a></div>
-              )}
-              {entry?.on_chain && <div className="text-green-600 font-medium">✓ On-chain confirmed</div>}
-            </div>
-          </div>
-        )}
-
-        {/* Claim card */}
-        {!user?.wlClaimed && !entry && (
-          <div className={`rounded-2xl border-2 p-5 mb-4 ${canClaim ? 'border-teal-400 bg-teal-50' : 'border-gray-200 bg-white'}`}>
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-3xl">🎟️</span>
-              <div>
-                <div className="font-medium text-gray-900">Whitelist Pass</div>
-                <div className="text-sm text-gray-500">Guaranteed mint allocation · Limited supply</div>
-              </div>
-            </div>
-
-            {/* Progress */}
-            <div className="mb-4">
-              <div className="flex justify-between text-sm mb-1.5">
-                <span className="text-gray-600">Your points</span>
-                <span className="font-medium text-gray-900">{Math.min(pts, 3)} / 3</span>
-              </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-teal-500 rounded-full transition-all"
-                  style={{ width: `${Math.min((pts / 3) * 100, 100)}%` }}
-                />
-              </div>
-            </div>
-
-            {canClaim ? (
-              <>
-                <input
-                  type="text"
-                  placeholder="0x... your Ethereum wallet address"
-                  value={wallet}
-                  onChange={e => setWallet(e.target.value)}
-                  className="w-full border border-gray-300 rounded-xl px-3 py-2.5 text-sm font-mono mb-3 focus:outline-none focus:ring-2 focus:ring-teal-400"
-                />
-                {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
-                <button
-                  onClick={claim}
-                  disabled={loading}
-                  className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-gray-200 text-white font-medium py-3 rounded-xl transition-colors text-sm"
-                >
-                  {loading ? 'Processing…' : 'Claim whitelist (3 pts) →'}
-                </button>
-              </>
-            ) : (
-              <div className="text-center text-sm text-gray-500 py-2">
-                You need <strong>{3 - pts} more point{3 - pts !== 1 ? 's' : ''}</strong> to unlock this.
-              </div>
+        {(user?.wlClaimed || entry) ? (
+          <div className="bg-[#D8FF1A] rounded-2xl p-5 mb-4">
+            <div className="text-2xl mb-2">🎟️</div>
+            <div className="font-bold text-[#111111] text-base mb-1">Whitelist claimed!</div>
+            <div className="text-xs text-[#111111]/70">You're in — see you at mint day.</div>
+            {entry?.walletAddress && (
+              <div className="mt-3 text-xs font-mono text-[#111111]/60 break-all">{entry.walletAddress}</div>
             )}
           </div>
-        )}
+        ) : (
+          <>
+            {/* Tasks */}
+            <div className="space-y-3 mb-6">
+              {tasks.map(task => (
+                <div
+                  key={task.id}
+                  className={`bg-white rounded-2xl border p-4 flex items-center gap-4 transition-all
+                    ${task.done ? 'border-[#D8FF1A]' : 'border-[#EAE7E1]'}`}
+                >
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0
+                    ${task.done ? 'bg-[#D8FF1A] text-[#111111]' : 'bg-[#EAE7E1] text-[#666666]'}`}>
+                    {task.done ? '✓' : task.icon}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-bold text-[#111111]">{task.label}</div>
+                    <div className="text-xs text-[#666666] mt-0.5">{task.sub}</div>
+                  </div>
+                  {!task.done && task.action && (
+                    <button
+                      onClick={task.action}
+                      className="shrink-0 text-xs font-bold bg-[#111111] text-white px-3 py-2 rounded-xl hover:bg-[#333] active:scale-95 transition-all"
+                    >
+                      {task.btnLabel}
+                    </button>
+                  )}
+                  {!task.done && !task.action && task.id !== 'points' && (
+                    <span className="text-xs text-[#666666] font-medium shrink-0">Soon</span>
+                  )}
+                </div>
+              ))}
+            </div>
 
-        {/* How it works */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <div className="font-medium text-gray-900 mb-3">How it works</div>
-          <div className="space-y-2.5 text-sm text-gray-500">
-            {[
-              'Predict the correct result for any World Cup match',
-              'Each correct pick earns you +1 point (verified by official data)',
-              'Accumulate 3 points, then enter your wallet address',
-              'Your wallet is added to the smart contract on-chain',
-              'You receive a guaranteed mint allocation on launch day',
-            ].map((s, i) => (
-              <div key={i} className="flex gap-2">
-                <span className="text-teal-500 flex-shrink-0">✓</span>
-                <span>{s}</span>
+            {/* Claim section */}
+            <div className={`rounded-2xl border-2 p-5 transition-all
+              ${canClaim ? 'border-[#D8FF1A] bg-white' : 'border-[#EAE7E1] bg-white opacity-60'}`}>
+
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xl">🎟️</span>
+                <div>
+                  <div className="text-sm font-bold text-[#111111]">Whitelist Pass</div>
+                  <div className="text-xs text-[#666666]">Guaranteed mint allocation · Limited supply</div>
+                </div>
+                {!allTasks && (
+                  <span className="ml-auto text-lg">🔒</span>
+                )}
               </div>
-            ))}
-          </div>
-        </div>
+
+              {canClaim ? (
+                <>
+                  <input
+                    type="text"
+                    placeholder="0x… your Ethereum wallet address"
+                    value={wallet}
+                    onChange={e => setWallet(e.target.value)}
+                    className="w-full border border-[#EAE7E1] rounded-xl px-3 py-2.5 text-xs font-mono mb-3 focus:outline-none focus:border-[#111111] bg-[#F5F2EC]"
+                  />
+                  {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
+                  <button
+                    onClick={claim}
+                    disabled={loading}
+                    className="w-full bg-[#D8FF1A] hover:bg-[#c8ef0a] text-[#111111] font-bold py-3 rounded-xl transition-all text-sm active:scale-95 disabled:opacity-50"
+                  >
+                    {loading ? 'Processing…' : 'Claim Whitelist →'}
+                  </button>
+                </>
+              ) : (
+                <div className="text-center text-xs text-[#666666] py-2">
+                  Complete all tasks above to unlock
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </main>
     </div>
   )
