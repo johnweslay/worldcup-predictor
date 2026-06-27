@@ -179,7 +179,7 @@ export default function MatchCard({ match, userPoints, usedStupidPickToday, onPr
                       disabled={saving}
                       className="px-3 py-2.5 rounded-xl bg-[#111111] text-[#D8FF1A] text-xs font-bold tracking-wide hover:bg-red-600 hover:text-white active:scale-95 transition-all disabled:opacity-50"
                     >
-                      ⚡ Stupid
+                      ⚡ Stupid Pick
                     </button>
                   )}
                 </div>
