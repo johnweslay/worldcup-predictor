@@ -48,13 +48,14 @@ export const authOptions: AuthOptions = {
         try {
           const { data: dbUser } = await supabaseAdmin
             .from('users')
-            .select('id, twitter_handle, points, wl_claimed')
+            .select('id, twitter_handle, points, locked_points, wl_claimed')
             .eq('twitter_id', token.sub)
             .single()
           if (dbUser) {
             ;(session.user as any).dbId      = dbUser.id
             ;(session.user as any).handle    = dbUser.twitter_handle
-            ;(session.user as any).points    = dbUser.points
+            ;(session.user as any).points        = dbUser.points
+            ;(session.user as any).locked_points = dbUser.locked_points
             ;(session.user as any).wlClaimed = dbUser.wl_claimed
           }
         } catch (err) {
