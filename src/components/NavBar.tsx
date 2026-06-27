@@ -19,7 +19,7 @@ export default function NavBar({ session }: { session: any }) {
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
           <div style={{ fontWeight: '700', color: '#F5F2EC', fontSize: '16px', letterSpacing: '-0.02em' }}>
-            ⚽ WC Predictor
+            Dude Trust Me
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '12px', fontWeight: '600', backgroundColor: '#D8FF1A', color: '#111111', padding: '4px 10px', borderRadius: '20px' }}>
