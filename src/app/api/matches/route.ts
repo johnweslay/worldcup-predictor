@@ -4,31 +4,28 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
-// GET /api/matches
-// Returns today's matches + the authed user's existing predictions
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const userId = (session.user as any).dbId
 
-  // Today's date range (UTC)
-  const todayStart = new Date()
-  todayStart.setUTCHours(0, 0, 0, 0)
-  const todayEnd = new Date()
-  todayEnd.setUTCHours(23, 59, 59, 999)
+  // Show next 4 days of matches (UTC)
+  const windowStart = new Date()
+  windowStart.setUTCHours(0, 0, 0, 0)
+  const windowEnd = new Date(windowStart)
+  windowEnd.setUTCDate(windowEnd.getUTCDate() + 4)
+  windowEnd.setUTCHours(23, 59, 59, 999)
 
-  // Fetch today's matches
   const { data: matches, error: mErr } = await supabaseAdmin
     .from('matches')
     .select('*')
-    .gte('kickoff_at', todayStart.toISOString())
-    .lte('kickoff_at', todayEnd.toISOString())
+    .gte('kickoff_at', windowStart.toISOString())
+    .lte('kickoff_at', windowEnd.toISOString())
     .order('kickoff_at', { ascending: true })
 
   if (mErr) return NextResponse.json({ error: mErr.message }, { status: 500 })
 
-  // Fetch user's predictions for these matches
   const matchIds = (matches ?? []).map((m: any) => m.id)
   let predictions: any[] = []
   if (matchIds.length > 0) {
@@ -40,7 +37,6 @@ export async function GET() {
     predictions = preds ?? []
   }
 
-  // Merge predictions into matches
   const predMap = Object.fromEntries(predictions.map((p: any) => [p.match_id, p]))
   const result = (matches ?? []).map((m: any) => ({
     ...m,

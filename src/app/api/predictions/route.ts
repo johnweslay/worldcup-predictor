@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Predictions are locked after kick-off' }, { status: 403 })
   }
 
-  if (match.status !== 'SCHEDULED') {
+  if (!['SCHEDULED', 'TIMED'].includes(match.status)) {
     return NextResponse.json({ error: 'Match is not open for predictions' }, { status: 403 })
   }
 

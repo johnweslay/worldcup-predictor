@@ -26,7 +26,7 @@ export default function MatchCard({ match, onPredicted }: Props) {
   const pred       = match.userPrediction
   const isResolved = pred?.is_correct !== null && pred?.is_correct !== undefined
   const kickoff    = new Date(match.kickoff_at)
-  const locked     = new Date() >= kickoff || match.status !== 'SCHEDULED'
+  const locked     = new Date() >= kickoff || !['SCHEDULED', 'TIMED'].includes(match.status)
 
   async function submit(choice: string) {
     if (locked || saving) return
