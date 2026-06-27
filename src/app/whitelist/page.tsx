@@ -13,8 +13,10 @@ export default function WhitelistPage() {
   const [entry, setEntry]           = useState<any>(null)
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState<string | null>(null)
-  const [taskFollow, setTaskFollow] = useState(false)
-  const [taskLike, setTaskLike]     = useState(false)
+  const [taskFollow, setTaskFollow]         = useState(false)
+  const [taskLike, setTaskLike]             = useState(false)
+  const [verifyingFollow, setVerifyingFollow] = useState(false)
+  const [verifyingLike, setVerifyingLike]     = useState(false)
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/')
@@ -44,19 +46,23 @@ export default function WhitelistPage() {
 
   function handleFollow() {
     window.open('https://x.com/STU_pidityy', '_blank')
+    setVerifyingFollow(true)
     setTimeout(() => {
+      setVerifyingFollow(false)
       setTaskFollow(true)
       saveTask('follow', true)
-    }, 1500)
+    }, 5000)
   }
 
   function handleLike() {
     if (TWEET_URL === 'PLACEHOLDER') return
     window.open(TWEET_URL, '_blank')
+    setVerifyingLike(true)
     setTimeout(() => {
+      setVerifyingLike(false)
       setTaskLike(true)
       saveTask('like', true)
-    }, 1500)
+    }, 5000)
   }
 
   const user      = session?.user as any
@@ -98,22 +104,24 @@ export default function WhitelistPage() {
       btnLabel: null,
     },
     {
-      id:       'follow',
-      icon:     '𝕏',
-      label:    'Follow @STU_pidityy',
-      sub:      'Follow us on X to stay updated',
-      done:     taskFollow,
-      action:   handleFollow,
-      btnLabel: 'Follow',
+      id:          'follow',
+      icon:        '𝕏',
+      label:       'Follow @STU_pidityy',
+      sub:         'Follow us on X to stay updated',
+      done:        taskFollow,
+      verifying:   verifyingFollow,
+      action:      handleFollow,
+      btnLabel:    'Follow',
     },
     {
-      id:       'like',
-      icon:     '🔁',
-      label:    'Like & Repost announcement',
-      sub:      TWEET_URL === 'PLACEHOLDER' ? 'Coming soon — tweet not posted yet' : 'Like and repost our announcement tweet',
-      done:     taskLike,
-      action:   TWEET_URL === 'PLACEHOLDER' ? null : handleLike,
-      btnLabel: 'Like & Repost',
+      id:          'like',
+      icon:        '🔁',
+      label:       'Like & Repost announcement',
+      sub:         TWEET_URL === 'PLACEHOLDER' ? 'Coming soon — tweet not posted yet' : 'Like and repost our announcement tweet',
+      done:        taskLike,
+      verifying:   verifyingLike,
+      action:      TWEET_URL === 'PLACEHOLDER' ? null : handleLike,
+      btnLabel:    'Like & Repost',
     },
   ]
 
@@ -153,7 +161,16 @@ export default function WhitelistPage() {
                     <div className="text-sm font-bold text-[#111111]">{task.label}</div>
                     <div className="text-xs text-[#666666] mt-0.5">{task.sub}</div>
                   </div>
-                  {!task.done && task.action && (
+                  {!task.done && task.verifying && (
+                    <div className="shrink-0 flex items-center gap-1.5 text-xs font-bold text-[#666666]">
+                      <svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      </svg>
+                      Verifying…
+                    </div>
+                  )}
+                  {!task.done && !task.verifying && task.action && (
                     <button
                       onClick={task.action}
                       className="shrink-0 text-xs font-bold bg-[#111111] text-white px-3 py-2 rounded-xl hover:bg-[#333] active:scale-95 transition-all"
@@ -161,7 +178,7 @@ export default function WhitelistPage() {
                       {task.btnLabel}
                     </button>
                   )}
-                  {!task.done && !task.action && task.id !== 'points' && (
+                  {!task.done && !task.verifying && !task.action && task.id !== 'points' && (
                     <span className="text-xs text-[#666666] font-medium shrink-0">Soon</span>
                   )}
                 </div>
