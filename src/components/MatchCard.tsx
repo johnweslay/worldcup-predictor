@@ -7,146 +7,237 @@ const PICK_LABELS: Record<string, string> = {
   AWAY_WIN: 'Away win',
 }
 
-const RESULT_COLOR: Record<string, string> = {
-  HOME_WIN: 'bg-green-50 border-green-400 text-green-800',
-  DRAW:     'bg-amber-50 border-amber-400 text-amber-800',
-  AWAY_WIN: 'bg-blue-50 border-blue-400 text-blue-800',
-}
-
 interface Props {
   match: any
-  onPredicted: (matchId: string, pick: string) => void
+  userPoints: number
+  usedStupidPickToday: boolean
+  onPredicted: (matchId: string, pick: string, isStupidPick: boolean) => void
 }
 
-export default function MatchCard({ match, onPredicted }: Props) {
-  const [pick, setPick]       = useState<string | null>(match.userPrediction?.pick ?? null)
-  const [saving, setSaving]   = useState(false)
-  const [error, setError]     = useState<string | null>(null)
+export default function MatchCard({ match, userPoints, usedStupidPickToday, onPredicted }: Props) {
+  const [selected, setSelected]       = useState<string | null>(null)
+  const [stupidPick, setStupidPick]   = useState(false)
+  const [showModal, setShowModal]     = useState(false)
+  const [confirmed, setConfirmed]     = useState<boolean>(!!match.userPrediction?.pick)
+  const [saving, setSaving]           = useState(false)
+  const [error, setError]             = useState<string | null>(null)
 
-  const pred       = match.userPrediction
-  const isResolved = pred?.is_correct !== null && pred?.is_correct !== undefined
-  const kickoff    = new Date(match.kickoff_at)
-  const locked     = new Date() >= kickoff || !['SCHEDULED', 'TIMED'].includes(match.status)
+  const pred          = match.userPrediction
+  const confirmedPick = pred?.pick ?? null
+  const isStupidUsed  = pred?.is_stupid_pick ?? false
+  const isResolved    = pred?.is_correct !== null && pred?.is_correct !== undefined
+  const kickoff       = new Date(match.kickoff_at)
+  const locked        = new Date() >= kickoff || !['SCHEDULED', 'TIMED'].includes(match.status)
+  const hasScore      = match.home_score !== null && match.away_score !== null
+  const canStupidPick = userPoints >= 1 && !usedStupidPickToday
 
-  async function submit(choice: string) {
-    if (locked || saving) return
-    setPick(choice)
+  async function submitPrediction(isStupid: boolean) {
+    if (!selected || saving) return
     setSaving(true)
     setError(null)
+    setShowModal(false)
+
     const res = await fetch('/api/predictions', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ matchId: match.id, pick: choice }),
+      body:    JSON.stringify({ matchId: match.id, pick: selected, isStupidPick: isStupid }),
     })
     const data = await res.json()
     setSaving(false)
-    if (!res.ok) { setError(data.error); setPick(null); return }
-    onPredicted(match.id, choice)
+
+    if (!res.ok) { setError(data.error); return }
+    setConfirmed(true)
+    setStupidPick(isStupid)
+    onPredicted(match.id, selected, isStupid)
   }
 
-  function btnClass(key: string) {
-    const base = 'flex-1 py-2.5 px-3 rounded-xl border text-sm font-medium transition-all'
+  function btnClass(key: string, active: string | null) {
+    const base = 'flex-1 py-2.5 px-2 rounded-xl border text-xs font-bold tracking-wide transition-all'
     if (isResolved) {
-      if (key === match.result && key === pred.pick)
-        return `${base} bg-green-100 border-green-500 text-green-800`
-      if (key === pred.pick && key !== match.result)
-        return `${base} bg-red-50 border-red-400 text-red-700 line-through`
+      if (key === match.result && key === confirmedPick)
+        return `${base} bg-[#D8FF1A] border-[#D8FF1A] text-[#111111]`
+      if (key === confirmedPick && key !== match.result)
+        return `${base} bg-[#EAE7E1] border-[#EAE7E1] text-[#666666] line-through`
       if (key === match.result)
-        return `${base} bg-green-50 border-green-300 text-green-700`
-      return `${base} bg-gray-50 border-gray-200 text-gray-400`
+        return `${base} bg-[#EAE7E1] border-[#EAE7E1] text-[#111111]`
+      return `${base} bg-transparent border-[#EAE7E1] text-[#666666]`
     }
-    if (key === pick)
-      return `${base} bg-blue-50 border-blue-500 text-blue-800 ring-1 ring-blue-300`
-    return `${base} bg-gray-50 border-gray-200 text-gray-700 hover:border-blue-300 hover:text-blue-700`
+    if (confirmed && key === confirmedPick)
+      return `${base} ${isStupidPick || isStupidUsed ? 'bg-red-500 border-red-500 text-white' : 'bg-[#111111] border-[#111111] text-white'}`
+    if (!confirmed && key === active)
+      return `${base} bg-[#111111] border-[#111111] text-[#D8FF1A]`
+    return `${base} bg-transparent border-[#EAE7E1] text-[#666666] hover:border-[#111111] hover:text-[#111111]`
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 mb-4 overflow-hidden">
-
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-100">
-        <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
-          {match.stage}{match.group_name ? ` · ${match.group_name}` : ''}
-        </span>
-        <span className="text-xs text-gray-400">
-          {kickoff.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} UTC
-        </span>
-      </div>
-
-      <div className="p-4">
-        {/* Teams */}
-        <div className="grid grid-cols-3 items-center gap-2 mb-4">
-          <div className="flex flex-col items-center gap-1.5">
-            <div className="text-3xl">{match.home_flag}</div>
-            <div className="text-sm font-medium text-gray-800 text-center leading-tight">
-              {match.home_team}
-            </div>
-          </div>
-          <div className="text-center">
-            {isResolved ? (
-              <div className="font-semibold text-gray-900 text-lg">
-                {match.home_score} – {match.away_score}
-              </div>
-            ) : (
-              <div className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">
-                VS
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col items-center gap-1.5">
-            <div className="text-3xl">{match.away_flag}</div>
-            <div className="text-sm font-medium text-gray-800 text-center leading-tight">
-              {match.away_team}
-            </div>
-          </div>
+    <>
+      <div className="bg-white rounded-2xl border border-[#EAE7E1] mb-3 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-[#F5F2EC] border-b border-[#EAE7E1]">
+          <span className="text-[10px] font-bold tracking-widest text-[#666666] uppercase">
+            {match.stage?.replace('_', ' ')}{match.group_name ? ` · ${match.group_name?.replace('_', ' ')}` : ''}
+          </span>
+          <span className="text-[10px] font-semibold text-[#666666]">
+            {kickoff.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
         </div>
 
-        {/* Prediction buttons */}
-        {!locked ? (
-          <>
-            <div className="flex gap-2 mb-3">
-              {(['HOME_WIN', 'DRAW', 'AWAY_WIN'] as const).map(key => (
-                <button
-                  key={key}
-                  className={btnClass(key)}
-                  onClick={() => submit(key)}
-                  disabled={saving}
-                >
-                  {PICK_LABELS[key]}
-                </button>
-              ))}
+        <div className="p-4">
+          {/* Teams */}
+          <div className="grid grid-cols-3 items-center gap-2 mb-4">
+            <div className="flex flex-col items-center gap-1">
+              <div className="text-3xl">{match.home_flag}</div>
+              <div className="text-xs font-semibold text-[#111111] text-center leading-tight">{match.home_team}</div>
             </div>
-            {pick && !saving && (
-              <p className="text-xs text-center text-gray-400">
-                Prediction saved — you can change it before kick-off
-              </p>
-            )}
-            {saving && (
-              <p className="text-xs text-center text-blue-500">Saving…</p>
-            )}
-            {error && (
-              <p className="text-xs text-center text-red-500">{error}</p>
-            )}
-          </>
-        ) : isResolved ? (
-          <>
-            <div className="flex gap-2 mb-3">
-              {(['HOME_WIN', 'DRAW', 'AWAY_WIN'] as const).map(key => (
-                <button key={key} className={btnClass(key)} disabled>
-                  {PICK_LABELS[key]}
-                </button>
-              ))}
+            <div className="text-center">
+              {hasScore ? (
+                <div className="font-bold text-[#111111] text-2xl tracking-tight">
+                  {match.home_score} – {match.away_score}
+                </div>
+              ) : (
+                <div className="text-xs font-bold text-[#666666] bg-[#EAE7E1] px-2 py-1.5 rounded-lg">VS</div>
+              )}
             </div>
-            <div className={`text-center text-xs font-medium py-1.5 px-3 rounded-lg border ${pred.is_correct ? 'bg-green-50 border-green-300 text-green-700' : 'bg-red-50 border-red-300 text-red-700'}`}>
-              {pred.is_correct ? '⚽ Correct! +1 point awarded' : '✗ Wrong prediction — better luck next match!'}
+            <div className="flex flex-col items-center gap-1">
+              <div className="text-3xl">{match.away_flag}</div>
+              <div className="text-xs font-semibold text-[#111111] text-center leading-tight">{match.away_team}</div>
             </div>
-          </>
-        ) : (
-          <div className="text-center text-xs text-gray-400 py-2">
-            🔒 Predictions locked — match in progress
           </div>
-        )}
+
+          {/* Prediction area */}
+          {locked ? (
+            isResolved ? (
+              <>
+                <div className="flex gap-2 mb-3">
+                  {(['HOME_WIN', 'DRAW', 'AWAY_WIN'] as const).map(key => (
+                    <button key={key} className={btnClass(key, confirmedPick)} disabled>
+                      {PICK_LABELS[key]}
+                    </button>
+                  ))}
+                </div>
+                {isStupidUsed && (
+                  <div className="text-center text-[10px] font-bold text-red-500 mb-2 tracking-widest uppercase">
+                    ⚡ Stupid Pick used
+                  </div>
+                )}
+                <div className={`text-center text-xs font-bold py-2 px-3 rounded-xl ${pred.is_correct ? 'bg-[#D8FF1A] text-[#111111]' : 'bg-[#EAE7E1] text-[#666666]'}`}>
+                  {pred.is_correct
+                    ? isStupidUsed ? '⚡ Stupid Pick correct! +2 points' : '⚽ Correct! +1 point'
+                    : isStupidUsed ? '⚡ Stupid Pick wrong — lost 1 point' : '✗ Wrong prediction'}
+                </div>
+              </>
+            ) : (
+              <div className="text-center text-xs font-semibold text-[#666666] py-2">
+                🔒 Predictions locked
+              </div>
+            )
+          ) : confirmed ? (
+            <>
+              <div className="flex gap-2 mb-3">
+                {(['HOME_WIN', 'DRAW', 'AWAY_WIN'] as const).map(key => (
+                  <button key={key} className={btnClass(key, confirmedPick)} disabled>
+                    {PICK_LABELS[key]}
+                  </button>
+                ))}
+              </div>
+              {(stupidPick || isStupidUsed) && (
+                <div className="text-center text-[10px] font-bold text-red-500 mb-2 tracking-widest uppercase">
+                  ⚡ Stupid Pick active — 1 pt locked
+                </div>
+              )}
+              <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#666666] bg-[#EAE7E1] rounded-xl py-2">
+                ⏱ Awaiting result
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex gap-2 mb-3">
+                {(['HOME_WIN', 'DRAW', 'AWAY_WIN'] as const).map(key => (
+                  <button
+                    key={key}
+                    className={btnClass(key, selected)}
+                    onClick={() => setSelected(key)}
+                    disabled={saving}
+                  >
+                    {PICK_LABELS[key]}
+                  </button>
+                ))}
+              </div>
+
+              {selected && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => submitPrediction(false)}
+                    disabled={saving}
+                    className="flex-1 py-2.5 rounded-xl bg-[#D8FF1A] text-[#111111] text-xs font-bold tracking-wide hover:bg-[#c8ef0a] active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {saving ? 'Saving…' : 'Confirm Prediction'}
+                  </button>
+                  {canStupidPick && (
+                    <button
+                      onClick={() => setShowModal(true)}
+                      disabled={saving}
+                      className="px-3 py-2.5 rounded-xl bg-[#111111] text-[#D8FF1A] text-xs font-bold tracking-wide hover:bg-red-600 hover:text-white active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      ⚡ Stupid
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {!selected && (
+                <p className="text-xs text-center text-[#666666] font-medium">Select a result to predict</p>
+              )}
+              {error && <p className="text-xs text-center text-red-500 mt-2">{error}</p>}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Stupid Pick Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="text-center mb-5">
+              <div className="text-4xl mb-2">⚡</div>
+              <h2 className="text-lg font-bold text-[#111111] mb-1">Stupid Pick</h2>
+              <p className="text-xs text-[#666666]">You're about to risk 1 point on this prediction</p>
+            </div>
+
+            <div className="space-y-2 mb-5">
+              <div className="flex items-center gap-3 bg-[#F5F2EC] rounded-xl px-4 py-3">
+                <span className="text-lg">✅</span>
+                <div>
+                  <div className="text-xs font-bold text-[#111111]">Correct prediction</div>
+                  <div className="text-xs text-[#666666]">Staked point returned + 2 bonus points</div>
+                </div>
+                <span className="ml-auto text-xs font-bold text-[#111111]">+2 pts</span>
+              </div>
+              <div className="flex items-center gap-3 bg-[#F5F2EC] rounded-xl px-4 py-3">
+                <span className="text-lg">❌</span>
+                <div>
+                  <div className="text-xs font-bold text-[#111111]">Wrong prediction</div>
+                  <div className="text-xs text-[#666666]">Staked point is lost</div>
+                </div>
+                <span className="ml-auto text-xs font-bold text-red-500">-1 pt</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => submitPrediction(true)}
+              className="w-full py-3 rounded-xl bg-[#111111] text-[#D8FF1A] text-sm font-bold tracking-wide mb-2 active:scale-95 transition-all"
+            >
+              Confirm Stupid Pick
+            </button>
+            <button
+              onClick={() => setShowModal(false)}
+              className="w-full py-2.5 rounded-xl text-[#666666] text-xs font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

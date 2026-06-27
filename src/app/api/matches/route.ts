@@ -31,7 +31,7 @@ export async function GET() {
   if (matchIds.length > 0) {
     const { data: preds } = await supabaseAdmin
       .from('predictions')
-      .select('match_id, pick, is_correct, point_awarded')
+      .select('match_id, pick, is_correct, point_awarded, is_stupid_pick')
       .eq('user_id', userId)
       .in('match_id', matchIds)
     predictions = preds ?? []
