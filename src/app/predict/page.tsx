@@ -63,9 +63,14 @@ export default function PredictPage() {
     return matchDay === todayStr && m.userPrediction?.is_stupid_pick === true
   })
 
-  // Group by local date
+  // Group by local date — only show past matches if user has a prediction
+  const now = new Date()
   const grouped: Record<string, any[]> = {}
   for (const match of matches) {
+    const kickoff = new Date(match.kickoff_at)
+    const isPast = kickoff < now
+    // Skip past matches where user has no prediction
+    if (isPast && !match.userPrediction) continue
     const localDate = new Date(match.kickoff_at)
     const localDateStr = `${localDate.getFullYear()}-${String(localDate.getMonth()+1).padStart(2,'0')}-${String(localDate.getDate()).padStart(2,'0')}`
     if (!grouped[localDateStr]) grouped[localDateStr] = []

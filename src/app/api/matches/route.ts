@@ -10,10 +10,13 @@ export async function GET() {
 
   const userId = (session.user as any).dbId
 
-  // Show next 4 days of matches (UTC)
+  // Show matches from 2 days ago through next 4 days
+  // This ensures yesterday's results show until points are awarded
   const windowStart = new Date()
   windowStart.setUTCHours(0, 0, 0, 0)
-  const windowEnd = new Date(windowStart)
+  windowStart.setUTCDate(windowStart.getUTCDate() - 2)
+  const windowEnd = new Date()
+  windowEnd.setUTCHours(0, 0, 0, 0)
   windowEnd.setUTCDate(windowEnd.getUTCDate() + 4)
   windowEnd.setUTCHours(23, 59, 59, 999)
 
