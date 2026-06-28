@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { getMatch } from '@/lib/football-api'
 
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret')
+  const secret = req.nextUrl.searchParams.get('secret')
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
@@ -51,9 +51,7 @@ export async function GET(req: NextRequest) {
       const correct = pred.pick === result
 
       if (pred.is_stupid_pick) {
-        // Stupid Pick resolution
         if (correct) {
-          // Win: unlock staked point + award 2 bonus points (net +2)
           await supabaseAdmin
             .from('predictions')
             .update({ is_correct: true, point_awarded: true, bonus_awarded: 2 })
@@ -61,7 +59,6 @@ export async function GET(req: NextRequest) {
           await supabaseAdmin.rpc('resolve_stupid_pick_win', { p_user_id: pred.user_id })
           awarded++
         } else {
-          // Loss: consume the locked point
           await supabaseAdmin
             .from('predictions')
             .update({ is_correct: false, point_awarded: false, bonus_awarded: 0 })
@@ -69,12 +66,10 @@ export async function GET(req: NextRequest) {
           await supabaseAdmin.rpc('resolve_stupid_pick_loss', { p_user_id: pred.user_id })
         }
       } else {
-        // Normal prediction
         await supabaseAdmin
           .from('predictions')
           .update({ is_correct: correct, point_awarded: correct })
           .eq('id', pred.id)
-
         if (correct) {
           await supabaseAdmin.rpc('award_point', { p_user_id: pred.user_id })
           awarded++

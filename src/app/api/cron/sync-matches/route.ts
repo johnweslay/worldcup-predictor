@@ -3,10 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getAllMatches } from '@/lib/football-api'
 
-// GET /api/cron/sync-matches
-// Run once daily (or manually) to import/update all WC fixtures from API.
 export async function GET(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret')
+  const secret = req.nextUrl.searchParams.get('secret')
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
@@ -17,8 +15,8 @@ export async function GET(req: NextRequest) {
   } catch (err: any) {
     return NextResponse.json({ error: 'Football API error', detail: err.message }, { status: 500 })
   }
-  let upserted = 0
 
+  let upserted = 0
   for (const m of matches) {
     const { error } = await supabaseAdmin
       .from('matches')
