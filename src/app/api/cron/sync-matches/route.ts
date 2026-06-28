@@ -11,7 +11,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const matches = await getAllMatches()
+  let matches
+  try {
+    matches = await getAllMatches()
+  } catch (err: any) {
+    return NextResponse.json({ error: 'Football API error', detail: err.message }, { status: 500 })
+  }
   let upserted = 0
 
   for (const m of matches) {
