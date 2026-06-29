@@ -7,10 +7,24 @@ export default function Home() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isTelegram, setIsTelegram] = useState(false)
 
   useEffect(() => {
     if (status === 'authenticated') router.push('/predict')
   }, [status, router])
+
+  useEffect(() => {
+    const ua = navigator.userAgent || ''
+    setIsTelegram(/Telegram|TelegramBot/i.test(ua) || !!(window as any).TelegramWebviewProxy)
+  }, [])
+
+  function handleSignIn(callbackUrl = '/predict') {
+    if (isTelegram) {
+      alert('Please open this link in your external browser to sign in with X.')
+      return
+    }
+    signIn('twitter', { callbackUrl })
+  }
 
   const navLinks = [
     { label: 'ABOUT',       href: '#about' },
@@ -50,7 +64,7 @@ export default function Home() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
-              onClick={() => signIn('twitter', { callbackUrl: '/predict' })}
+              onClick={() => handleSignIn('/predict')}
               style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#D8FF1A', color: '#111111', fontWeight: '700', fontSize: '12px', padding: '9px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', letterSpacing: '0.03em', fontFamily: "'Space Grotesk', sans-serif" }}
             >
               <svg viewBox="0 0 24 24" style={{ width: '13px', height: '13px', fill: '#111111' }}>
@@ -163,7 +177,7 @@ export default function Home() {
             ))}
             <div style={{ padding: '16px 20px', textAlign: 'center' as const }}>
               <button
-                onClick={() => signIn('twitter', { callbackUrl: '/points' })}
+                onClick={() => handleSignIn('/points')}
                 style={{ fontSize: '12px', fontWeight: '700', color: '#D8FF1A', background: 'none', border: '1px solid #D8FF1A', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', letterSpacing: '0.05em', fontFamily: "'Space Grotesk', sans-serif" }}
               >
                 SIGN IN TO SEE FULL LEADERBOARD →
@@ -230,7 +244,7 @@ export default function Home() {
         <div style={s.divider} />
         <div style={{ paddingTop: '40px', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '16px' }}>
           <button
-            onClick={() => signIn('twitter', { callbackUrl: '/predict' })}
+            onClick={() => handleSignIn('/predict')}
             style={{ width: '100%', maxWidth: '480px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', backgroundColor: '#D8FF1A', color: '#111111', fontWeight: '700', fontSize: '15px', padding: '18px 32px', borderRadius: '12px', border: 'none', cursor: 'pointer', letterSpacing: '0.02em', fontFamily: "'Space Grotesk', sans-serif" }}
           >
             <svg viewBox="0 0 24 24" style={{ width: '16px', height: '16px', fill: '#111111' }}>
