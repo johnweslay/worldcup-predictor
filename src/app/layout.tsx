@@ -5,6 +5,11 @@ import { Providers } from './providers'
 export const metadata: Metadata = {
   title: 'Dude Trust Me',
   description: 'Predict FIFA World Cup match winners and earn whitelist spots',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
   openGraph: {
     title: 'Dude Trust Me',
     description: 'Predict FIFA World Cup match winners and earn whitelist spots',
