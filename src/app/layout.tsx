@@ -3,8 +3,20 @@ import './globals.css'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  title: 'World Cup Predictor',
+  title: 'Dude Trust Me',
   description: 'Predict FIFA World Cup match winners and earn whitelist spots',
+  openGraph: {
+    title: 'Dude Trust Me',
+    description: 'Predict FIFA World Cup match winners and earn whitelist spots',
+    url: 'https://dudetrustme.stupidity.website',
+    images: [
+      {
+        url: 'https://dudetrustme.stupidity.website/og-image.png',
+        width: 1200,
+        height: 630,
+      }
+    ],
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
